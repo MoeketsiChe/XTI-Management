@@ -1,8 +1,10 @@
 import { useState } from "react";
 import { useLibrary } from "../context/LibraryContext";
+import { useAuth } from "../context/AuthContext";
 
 export default function Dashboard() {
   const { books } = useLibrary();
+  const { currentUser } = useAuth();
   const [search, setSearch] = useState("");
 
   const totalTitles = books.length;
@@ -28,7 +30,7 @@ export default function Dashboard() {
       <div className="page-head">
         <div>
           <p className="eyebrow">Library Management System</p>
-          <h1>Good day, Librarian.</h1>
+          <h1>Good day, {currentUser.name}.</h1>
         </div>
         <input
           className="search"

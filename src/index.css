@@ -179,3 +179,25 @@ td button { padding: 0.4rem 0.8rem;
   .hero-count { text-align: left;
    }
 }
+
+/* ---------- Auth, messages, sidebar user box ---------- */
+.auth-layout { min-height: 100vh; display: grid; place-items: center; padding: 1.5rem; }
+.login-card {
+  width: 100%; max-width: 440px;
+  background: var(--card); border: 1px solid var(--border);
+  border-radius: 24px; padding: 2.5rem;
+}
+.login-card form { grid-template-columns: 1fr; }
+.login-card .brand { margin-bottom: 1.5rem; }
+
+.user-box { margin-top: 2rem; padding-top: 1.5rem; border-top: 1px solid var(--border); }
+.user-box p { font-weight: 600; }
+.user-box small { color: var(--muted); text-transform: capitalize; display: block; margin-bottom: 0.8rem; }
+
+.message { padding: 0.8rem 1rem; border-radius: 10px; margin: 1rem 0; }
+.message.ok { background: rgba(46, 204, 113, 0.15); color: #6ee7a0; }
+.message.bad { background: rgba(228, 0, 43, 0.15); color: #ff6b84; }
+.hint-line { color: var(--muted); margin-top: 0.8rem; }
+
+.badge.add { background: rgba(46, 204, 113, 0.2); color: #6ee7a0; }
+.badge.borrow { background: rgba(228, 0, 43, 0.2); color: #ff6b84; }
