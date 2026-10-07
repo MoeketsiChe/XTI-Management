@@ -21,8 +21,10 @@ React (JSX, hooks, Router), Vite, CSS, localStorage
 - React Router with protected, role-based routes
 
 ## Run locally
-    npm install
-    npm run dev
+```bash
+npm install
+npm run dev
+```
 Then open http://localhost:5173
 
 ## Demo login
@@ -33,4 +35,4 @@ Then open http://localhost:5173
 Passwords are stored as plain text in localStorage because this is a classroom demo with no backend. A real system would hash passwords on a server.
 
 ## Author
-[Moeketsi Cheoane], [901020524], [Information Technology]
+Moeketsi Cheoane, 901020524, Information Technology
