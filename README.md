@@ -1,16 +1,36 @@
-# React + Vite
+# XTI Library Management System
 
-This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
+A web-based library management system for a community library, built with React.
+Data is saved in the browser's localStorage.
 
-Currently, two official plugins are available:
+## Features
+- **Books:** add, update and delete books (title, author, genre, ISBN, quantity)
+- **Availability:** track stock; record transactions to add stock or deduct stock when books are borrowed
+- **Dashboard:** book availability table with low-stock highlighting (fewer than 2 copies), plus live stats and search
+- **Transactions:** add/borrow forms and a full transaction history log
+- **Users:** login, plus admin forms to add, update and delete users (name, membership ID, role)
+- **Roles:** admin (everything), librarian (dashboard, books, transactions), member (dashboard only)
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+## Tech
+React (JSX, hooks, Router), Vite, CSS, localStorage
 
-## React Compiler
+## React concepts demonstrated
+- `useState`, `useEffect`, `useContext`, and a custom `useLocalStorage` hook
+- Component composition (BookForm, BookTable, UserForm, UserTable, Navbar, ProtectedRoute)
+- Controlled forms with validation
+- React Router with protected, role-based routes
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+## Run locally
+    npm install
+    npm run dev
+Then open http://localhost:5173
 
-## Expanding the Oxlint configuration
+## Demo login
+- Membership ID: `ADMIN001`
+- Password: `admin123`
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and Oxlint's TypeScript related rules in your project.
+## Notes
+Passwords are stored as plain text in localStorage because this is a classroom demo with no backend. A real system would hash passwords on a server.
+
+## Author
+[Moeketsi Cheoane], [901020524], [Information Technology]
