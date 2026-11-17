@@ -6,6 +6,7 @@ export default function Login() {
   const { currentUser, login } = useAuth();
   const [values, setValues] = useState({ membershipId: "", password: "" });
   const [errors, setErrors] = useState({});
+  const [submitting, setSubmitting] = useState(false);
 
   if (currentUser) return <Navigate to="/" replace />;
 
@@ -14,13 +15,16 @@ export default function Login() {
     setValues((prev) => ({ ...prev, [name]: value }));
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     const errs = {};
     if (!values.membershipId.trim()) errs.membershipId = "Membership ID is required";
     if (!values.password) errs.password = "Password is required";
+
     if (Object.keys(errs).length === 0) {
-      const result = login(values.membershipId, values.password);
+      setSubmitting(true);
+      const result = await login(values.membershipId, values.password);
+      setSubmitting(false);
       if (!result.ok) errs.form = result.error;
     }
     setErrors(errs);
@@ -57,7 +61,9 @@ export default function Login() {
           />
           {errors.password && <p className="error">{errors.password}</p>}
         </div>
-        <button type="submit">Login</button>
+        <button type="submit" disabled={submitting}>
+          {submitting ? "Signing in..." : "Login"}
+        </button>
       </form>
     </div>
   );

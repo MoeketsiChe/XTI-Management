@@ -7,16 +7,21 @@ export default function Transactions() {
   const [type, setType] = useState("add");
   const [amount, setAmount] = useState("");
   const [message, setMessage] = useState(null);
+  const [submitting, setSubmitting] = useState(false);
 
   const selected = books.find((b) => String(b.id) === bookId);
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     if (!bookId) {
       setMessage({ ok: false, text: "Please select a book" });
       return;
     }
-    const result = adjustStock(Number(bookId), type, amount);
+
+    setSubmitting(true);
+    const result = await adjustStock(Number(bookId), type, amount);
+    setSubmitting(false);
+
     if (result.ok) {
       setMessage({
         ok: true,
@@ -36,7 +41,14 @@ export default function Transactions() {
       <form onSubmit={handleSubmit} noValidate style={{ marginTop: "1.5rem" }}>
         <div>
           <label htmlFor="book">Book</label>
-          <select id="book" value={bookId} onChange={(e) => { setBookId(e.target.value); setMessage(null); }}>
+          <select
+            id="book"
+            value={bookId}
+            onChange={(e) => {
+              setBookId(e.target.value);
+              setMessage(null);
+            }}
+          >
             <option value="">Select a book</option>
             {books.map((b) => (
               <option key={b.id} value={b.id}>
@@ -47,7 +59,14 @@ export default function Transactions() {
         </div>
         <div>
           <label htmlFor="type">Action</label>
-          <select id="type" value={type} onChange={(e) => { setType(e.target.value); setMessage(null); }}>
+          <select
+            id="type"
+            value={type}
+            onChange={(e) => {
+              setType(e.target.value);
+              setMessage(null);
+            }}
+          >
             <option value="add">Add stock (new books arrived)</option>
             <option value="borrow">Borrow (deduct stock)</option>
           </select>
@@ -59,13 +78,22 @@ export default function Transactions() {
             type="number"
             min="1"
             value={amount}
-            onChange={(e) => { setAmount(e.target.value); setMessage(null); }}
+            onChange={(e) => {
+              setAmount(e.target.value);
+              setMessage(null);
+            }}
           />
         </div>
-        <button type="submit">Record transaction</button>
+        <button type="submit" disabled={submitting}>
+          {submitting ? "Saving..." : "Record transaction"}
+        </button>
       </form>
 
-      {selected && <p className="hint-line">Current stock of "{selected.title}": {selected.quantity}</p>}
+      {selected && (
+        <p className="hint-line">
+          Current stock of "{selected.title}": {selected.quantity}
+        </p>
+      )}
       {message && <p className={message.ok ? "message ok" : "message bad"}>{message.text}</p>}
 
       <h2>Transaction History</h2>
@@ -80,6 +108,7 @@ export default function Transactions() {
                 <th>Book</th>
                 <th>Type</th>
                 <th>Amount</th>
+                <th>By</th>
               </tr>
             </thead>
             <tbody>
@@ -93,6 +122,7 @@ export default function Transactions() {
                     </span>
                   </td>
                   <td>{t.type === "add" ? `+${t.amount}` : `-${t.amount}`}</td>
+                  <td>{t.userName || "-"}</td>
                 </tr>
               ))}
             </tbody>

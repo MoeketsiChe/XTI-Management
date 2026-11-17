@@ -1,44 +1,100 @@
-import { createContext, useContext } from "react";
-import useLocalStorage from "../hooks/useLocalStorage";
+import { createContext, useContext, useState, useEffect, useCallback } from "react";
+import { useAuth } from "./AuthContext";
+import { api } from "../api";
 
 const LibraryContext = createContext(null);
 
+// Convert a database row to the shape the pages use
+const toTransaction = (t) => ({
+  id: t.id,
+  bookId: t.book_id,
+  title: t.book_title,
+  type: t.type, // "add" or "borrow"
+  amount: t.quantity,
+  date: t.created_at,
+  userName: t.user_name,
+});
+
 export function LibraryProvider({ children }) {
-  const [books, setBooks] = useLocalStorage("books", []);
-  const [transactions, setTransactions] = useLocalStorage("transactions", []);
+  const { currentUser } = useAuth();
+  const [books, setBooks] = useState([]);
+  const [transactions, setTransactions] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
 
-  const logTransaction = (book, type, amount) => {
-    setTransactions((prev) => [
-      {
-        id: Date.now() + Math.random(),
-        bookId: book.id,
-        title: book.title,
-        type, // "add" or "borrow"
-        amount,
-        date: new Date().toISOString(),
-      },
-      ...prev,
-    ]);
-  };
+  const refresh = useCallback(async () => {
+    try {
+      const [bookData, transactionData] = await Promise.all([
+        api.getBooks(),
+        api.getTransactions(),
+      ]);
+      setBooks(bookData);
+      setTransactions(transactionData.map(toTransaction));
+      setError("");
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
 
-  const addBook = (data) => {
-    const book = { ...data, id: Date.now(), quantity: Number(data.quantity) };
-    setBooks((prev) => [...prev, book]);
-    if (book.quantity > 0) logTransaction(book, "add", book.quantity);
+  // Load data when someone logs in, clear it when they log out
+  useEffect(() => {
+    if (currentUser) {
+      setLoading(true);
+      refresh();
+    } else {
+      setBooks([]);
+      setTransactions([]);
+    }
+  }, [currentUser?.id, refresh]);
+
+  const addBook = async (data) => {
+    try {
+      await api.addBook({
+        title: data.title,
+        author: data.author,
+        genre: data.genre,
+        isbn: data.isbn,
+        quantity: Number(data.quantity) || 0,
+      });
+      await refresh();
+      return { ok: true };
+    } catch (err) {
+      return { ok: false, error: err.message };
+    }
   };
 
   // Quantity changes only through adjustStock, so the history stays accurate
-  const updateBook = (id, data) => {
-    setBooks((prev) =>
-      prev.map((b) => (b.id === id ? { ...b, ...data, quantity: b.quantity } : b))
-    );
+  const updateBook = async (id, data) => {
+    const book = books.find((b) => b.id === id);
+    if (!book) return { ok: false, error: "Book not found" };
+    try {
+      await api.updateBook(id, {
+        title: data.title,
+        author: data.author,
+        genre: data.genre,
+        isbn: data.isbn,
+        quantity: book.quantity,
+      });
+      await refresh();
+      return { ok: true };
+    } catch (err) {
+      return { ok: false, error: err.message };
+    }
   };
 
-  const deleteBook = (id) => {
-    setBooks((prev) => prev.filter((b) => b.id !== id));
+  const deleteBook = async (id) => {
+    try {
+      await api.deleteBook(id);
+      await refresh();
+      return { ok: true };
+    } catch (err) {
+      return { ok: false, error: err.message };
+    }
   };
 
-  const adjustStock = (bookId, type, amount) => {
+  const adjustStock = async (bookId, type, amount) => {
     const book = books.find((b) => b.id === bookId);
     const qty = Number(amount);
     if (!book) return { ok: false, error: "Book not found" };
@@ -47,15 +103,30 @@ export function LibraryProvider({ children }) {
     if (type === "borrow" && qty > book.quantity)
       return { ok: false, error: `Only ${book.quantity} in stock` };
 
-    const change = type === "add" ? qty : -qty;
-    setBooks((prev) =>
-      prev.map((b) => (b.id === bookId ? { ...b, quantity: b.quantity + change } : b))
-    );
-    logTransaction(book, type, qty);
-    return { ok: true };
+    try {
+      await api.addTransaction({
+        book_id: bookId,
+        user_id: currentUser?.id,
+        type,
+        quantity: qty,
+      });
+      await refresh();
+      return { ok: true };
+    } catch (err) {
+      return { ok: false, error: err.message };
+    }
   };
 
-  const value = { books, transactions, addBook, updateBook, deleteBook, adjustStock };
+  const value = {
+    books,
+    transactions,
+    loading,
+    error,
+    addBook,
+    updateBook,
+    deleteBook,
+    adjustStock,
+  };
 
   return <LibraryContext.Provider value={value}>{children}</LibraryContext.Provider>;
 }

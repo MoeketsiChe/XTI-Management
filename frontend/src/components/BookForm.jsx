@@ -2,6 +2,15 @@ import { useState } from "react";
 
 const emptyBook = { title: "", author: "", genre: "", isbn: "", quantity: "" };
 
+// Database rows can have null fields, so turn them into empty strings for the inputs
+const normalise = (book) => ({
+  title: book.title ?? "",
+  author: book.author ?? "",
+  genre: book.genre ?? "",
+  isbn: book.isbn ?? "",
+  quantity: book.quantity ?? "",
+});
+
 export default function BookForm({
   initialValues = emptyBook,
   onSubmit,
@@ -10,8 +19,9 @@ export default function BookForm({
   existingBooks,
   editingId = null,
 }) {
-  const [values, setValues] = useState(initialValues);
+  const [values, setValues] = useState(normalise(initialValues));
   const [errors, setErrors] = useState({});
+  const [submitting, setSubmitting] = useState(false);
   const isEditing = editingId !== null;
 
   const handleChange = (e) => {
@@ -40,20 +50,24 @@ export default function BookForm({
     return errs;
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     const errs = validate();
     setErrors(errs);
     if (Object.keys(errs).length > 0) return;
 
-    onSubmit({
+    setSubmitting(true);
+    const result = await onSubmit({
       title: values.title.trim(),
       author: values.author.trim(),
       genre: values.genre.trim(),
       isbn: String(values.isbn).replace(/[-\s]/g, ""),
       quantity: Number(values.quantity),
     });
-    if (!isEditing) setValues(emptyBook);
+    setSubmitting(false);
+
+    // Only clear the form when the backend accepted the book
+    if (result?.ok && !isEditing) setValues(emptyBook);
   };
 
   return (
@@ -93,7 +107,9 @@ export default function BookForm({
         />
         {errors.quantity && <p className="error">{errors.quantity}</p>}
       </div>
-      <button type="submit">{submitLabel}</button>
+      <button type="submit" disabled={submitting}>
+        {submitting ? "Saving..." : submitLabel}
+      </button>
       {onCancel && (
         <button type="button" onClick={onCancel}>
           Cancel

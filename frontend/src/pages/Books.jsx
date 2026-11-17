@@ -6,20 +6,33 @@ import BookTable from "../components/BookTable";
 export default function Books() {
   const { books, addBook, updateBook, deleteBook } = useLibrary();
   const [editingBook, setEditingBook] = useState(null);
+  const [message, setMessage] = useState(null);
 
-  const handleSubmit = (data) => {
-    if (editingBook) {
-      updateBook(editingBook.id, data);
-      setEditingBook(null);
+  const handleSubmit = async (data) => {
+    const result = editingBook
+      ? await updateBook(editingBook.id, data)
+      : await addBook(data);
+
+    if (result.ok) {
+      setMessage({
+        ok: true,
+        text: editingBook ? "Book updated" : "Book added",
+      });
+      if (editingBook) setEditingBook(null);
     } else {
-      addBook(data);
+      setMessage({ ok: false, text: result.error });
     }
+    return result;
   };
 
-  const handleDelete = (book) => {
-    if (window.confirm(`Delete "${book.title}"?`)) {
-      deleteBook(book.id);
+  const handleDelete = async (book) => {
+    if (!window.confirm(`Delete "${book.title}"?`)) return;
+    const result = await deleteBook(book.id);
+    if (result.ok) {
+      setMessage({ ok: true, text: `"${book.title}" deleted` });
       if (editingBook?.id === book.id) setEditingBook(null);
+    } else {
+      setMessage({ ok: false, text: result.error });
     }
   };
 
@@ -36,6 +49,8 @@ export default function Books() {
         onSubmit={handleSubmit}
         onCancel={editingBook ? () => setEditingBook(null) : undefined}
       />
+
+      {message && <p className={message.ok ? "message ok" : "message bad"}>{message.text}</p>}
 
       <h2>All Books</h2>
       <BookTable books={books} onEdit={setEditingBook} onDelete={handleDelete} />

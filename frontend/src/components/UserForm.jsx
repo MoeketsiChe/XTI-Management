@@ -12,6 +12,7 @@ export default function UserForm({
 }) {
   const [values, setValues] = useState(initialValues);
   const [errors, setErrors] = useState({});
+  const [submitting, setSubmitting] = useState(false);
   const isEditing = editingId !== null;
 
   const handleChange = (e) => {
@@ -43,19 +44,23 @@ export default function UserForm({
     return errs;
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     const errs = validate();
     setErrors(errs);
     if (Object.keys(errs).length > 0) return;
 
-    onSubmit({
+    setSubmitting(true);
+    const result = await onSubmit({
       name: values.name.trim(),
       membershipId: values.membershipId.trim(),
       role: values.role,
       password: values.password,
     });
-    if (!isEditing) setValues(emptyUser);
+    setSubmitting(false);
+
+    // Only clear the form when the backend accepted the user
+    if (result?.ok && !isEditing) setValues(emptyUser);
   };
 
   return (
@@ -67,7 +72,12 @@ export default function UserForm({
       </div>
       <div>
         <label htmlFor="membershipId">Membership ID</label>
-        <input id="membershipId" name="membershipId" value={values.membershipId} onChange={handleChange} />
+        <input
+          id="membershipId"
+          name="membershipId"
+          value={values.membershipId}
+          onChange={handleChange}
+        />
         {errors.membershipId && <p className="error">{errors.membershipId}</p>}
       </div>
       <div>
@@ -82,10 +92,18 @@ export default function UserForm({
         <label htmlFor="password">
           {isEditing ? "New password (leave blank to keep)" : "Password"}
         </label>
-        <input id="password" name="password" type="password" value={values.password} onChange={handleChange} />
+        <input
+          id="password"
+          name="password"
+          type="password"
+          value={values.password}
+          onChange={handleChange}
+        />
         {errors.password && <p className="error">{errors.password}</p>}
       </div>
-      <button type="submit">{submitLabel}</button>
+      <button type="submit" disabled={submitting}>
+        {submitting ? "Saving..." : submitLabel}
+      </button>
       {onCancel && (
         <button type="button" onClick={onCancel}>
           Cancel

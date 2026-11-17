@@ -8,21 +8,32 @@ export default function Users() {
   const [editingUser, setEditingUser] = useState(null);
   const [notice, setNotice] = useState(null);
 
-  const handleSubmit = (data) => {
-    const result = editingUser ? updateUser(editingUser.id, data) : addUser(data);
+  const handleSubmit = async (data) => {
+    const result = editingUser
+      ? await updateUser(editingUser.id, data)
+      : await addUser(data);
+
     if (result.ok) {
-      setNotice(null);
+      setNotice({
+        ok: true,
+        text: editingUser ? "User updated" : "User added",
+      });
       setEditingUser(null);
     } else {
-      setNotice(result.error);
+      setNotice({ ok: false, text: result.error });
     }
+    return result;
   };
 
-  const handleDelete = (user) => {
+  const handleDelete = async (user) => {
     if (!window.confirm(`Delete user "${user.name}"?`)) return;
-    const result = deleteUser(user.id);
-    setNotice(result.ok ? null : result.error);
-    if (result.ok && editingUser?.id === user.id) setEditingUser(null);
+    const result = await deleteUser(user.id);
+    if (result.ok) {
+      setNotice({ ok: true, text: `"${user.name}" deleted` });
+      if (editingUser?.id === user.id) setEditingUser(null);
+    } else {
+      setNotice({ ok: false, text: result.error });
+    }
   };
 
   return (
@@ -30,7 +41,7 @@ export default function Users() {
       <p className="eyebrow">Administration</p>
       <h1>{editingUser ? "Update User" : "Add New User"}</h1>
 
-      {notice && <p className="message bad">{notice}</p>}
+      {notice && <p className={notice.ok ? "message ok" : "message bad"}>{notice.text}</p>}
 
       <UserForm
         key={editingUser ? editingUser.id : "new"}

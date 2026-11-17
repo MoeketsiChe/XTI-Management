@@ -3,7 +3,7 @@ import { useLibrary } from "../context/LibraryContext";
 import { useAuth } from "../context/AuthContext";
 
 export default function Dashboard() {
-  const { books } = useLibrary();
+  const { books, loading, error } = useLibrary();
   const { currentUser } = useAuth();
   const [search, setSearch] = useState("");
 
@@ -14,7 +14,7 @@ export default function Dashboard() {
   const needsAttention = lowStock + outOfStock;
 
   const filtered = books.filter((b) =>
-    `${b.title} ${b.author} ${b.genre} ${b.isbn}`
+    `${b.title} ${b.author} ${b.genre ?? ""} ${b.isbn}`
       .toLowerCase()
       .includes(search.toLowerCase())
   );
@@ -40,6 +40,12 @@ export default function Dashboard() {
           onChange={(e) => setSearch(e.target.value)}
         />
       </div>
+
+      {error && (
+        <p className="message bad">
+          Could not reach the server: {error}. Make sure the backend is running.
+        </p>
+      )}
 
       <div className="hero">
         <div>
@@ -77,7 +83,9 @@ export default function Dashboard() {
       <p className="eyebrow" style={{ marginTop: "2.5rem" }}>Library inventory</p>
       <h1 style={{ fontSize: "1.8rem", marginBottom: "1rem" }}>Book Availability</h1>
 
-      {filtered.length === 0 ? (
+      {loading ? (
+        <p>Loading books...</p>
+      ) : filtered.length === 0 ? (
         <p>No books to show. Add some on the Books page.</p>
       ) : (
         <div className="table-wrap">
@@ -105,6 +113,3 @@ export default function Dashboard() {
           </table>
         </div>
       )}
-    </section>
-  );
-}

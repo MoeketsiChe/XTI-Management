@@ -7,7 +7,7 @@ const router = express.Router();
 router.get("/", async (req, res) => {
   try {
     const [rows] = await pool.query(`
-      SELECT t.id, t.type, t.quantity, t.created_at,
+      SELECT t.id, t.book_id, t.type, t.quantity, t.created_at,
              b.title AS book_title, u.name AS user_name
       FROM transactions t
       JOIN books b ON t.book_id = b.id
@@ -20,14 +20,20 @@ router.get("/", async (req, res) => {
   }
 });
 
-// POST record a transaction and update stock
+// POST record a transaction and update stock together
 router.post("/", async (req, res) => {
   const { book_id, user_id, type, quantity } = req.body;
   const qty = Number(quantity);
 
-  if (!book_id || !["add", "borrow"].includes(type) || !Number.isInteger(qty) || qty <= 0) {
+  if (
+    !book_id ||
+    !["add", "borrow"].includes(type) ||
+    !Number.isInteger(qty) ||
+    qty <= 0
+  ) {
     return res.status(400).json({
-      error: "book_id, a type of 'add' or 'borrow', and a positive whole quantity are required",
+      error:
+        "book_id, a type of 'add' or 'borrow', and a positive whole quantity are required",
     });
   }
 
@@ -52,10 +58,10 @@ router.post("/", async (req, res) => {
     }
 
     const change = type === "add" ? qty : -qty;
-    await connection.query("UPDATE books SET quantity = quantity + ? WHERE id = ?", [
-      change,
-      book_id,
-    ]);
+    await connection.query(
+      "UPDATE books SET quantity = quantity + ? WHERE id = ?",
+      [change, book_id]
+    );
 
     const [result] = await connection.query(
       "INSERT INTO transactions (book_id, user_id, type, quantity) VALUES (?, ?, ?, ?)",

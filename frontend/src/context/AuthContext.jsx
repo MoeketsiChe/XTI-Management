@@ -1,58 +1,106 @@
-import { createContext, useContext } from "react";
+import { createContext, useContext, useState, useEffect, useCallback } from "react";
 import useLocalStorage from "../hooks/useLocalStorage";
+import { api } from "../api";
 
 const AuthContext = createContext(null);
 
-const defaultUsers = [
-  { id: 1, name: "Administrator", membershipId: "ADMIN001", role: "admin", password: "admin123" },
-];
+// Convert a database row (membership_id) to the shape the pages use (membershipId)
+const toUser = (u) => ({
+  id: u.id,
+  name: u.name,
+  membershipId: u.membership_id,
+  role: u.role,
+});
 
 export function AuthProvider({ children }) {
-  const [users, setUsers] = useLocalStorage("users", defaultUsers);
-  const [currentUserId, setCurrentUserId] = useLocalStorage("currentUserId", null);
+  // Only the logged-in user is kept in the browser, so a refresh doesn't log you out
+  const [currentUser, setCurrentUser] = useLocalStorage("currentUser", null);
+  const [users, setUsers] = useState([]);
 
-  const currentUser = users.find((u) => u.id === currentUserId) || null;
+  const loadUsers = useCallback(async () => {
+    try {
+      const data = await api.getUsers();
+      setUsers(data.map(toUser));
+    } catch (err) {
+      console.error(err);
+    }
+  }, []);
 
-  const login = (membershipId, password) => {
-    const user = users.find(
-      (u) =>
-        u.membershipId.toLowerCase() === membershipId.trim().toLowerCase() &&
-        u.password === password
-    );
-    if (!user) return { ok: false, error: "Invalid membership ID or password" };
-    setCurrentUserId(user.id);
-    return { ok: true };
+  // Only admins manage users, so only load the list for them
+  useEffect(() => {
+    if (currentUser?.role === "admin") loadUsers();
+    else setUsers([]);
+  }, [currentUser?.id, currentUser?.role, loadUsers]);
+
+  const login = async (membershipId, password) => {
+    try {
+      const user = await api.login({
+        membership_id: membershipId.trim(),
+        password,
+      });
+      setCurrentUser(toUser(user));
+      return { ok: true };
+    } catch (err) {
+      return { ok: false, error: err.message };
+    }
   };
 
-  const logout = () => setCurrentUserId(null);
+  const logout = () => setCurrentUser(null);
 
-  const addUser = (data) => {
-    setUsers((prev) => [...prev, { ...data, id: Date.now() }]);
-    return { ok: true };
+  const addUser = async (data) => {
+    try {
+      await api.addUser({
+        name: data.name,
+        membership_id: data.membershipId,
+        password: data.password,
+        role: data.role,
+      });
+      await loadUsers();
+      return { ok: true };
+    } catch (err) {
+      return { ok: false, error: err.message };
+    }
   };
 
-  const updateUser = (id, data) => {
+  const updateUser = async (id, data) => {
     const target = users.find((u) => u.id === id);
     const adminCount = users.filter((u) => u.role === "admin").length;
-    if (target.role === "admin" && data.role !== "admin" && adminCount === 1) {
+    if (target?.role === "admin" && data.role !== "admin" && adminCount === 1) {
       return { ok: false, error: "There must be at least one admin" };
     }
-    setUsers((prev) =>
-      prev.map((u) =>
-        u.id === id
-          ? { ...u, ...data, password: data.password ? data.password : u.password }
-          : u
-      )
-    );
-    return { ok: true };
+    try {
+      await api.updateUser(id, {
+        name: data.name,
+        membership_id: data.membershipId,
+        role: data.role,
+        password: data.password || undefined, // blank = keep the old password
+      });
+      await loadUsers();
+      if (currentUser?.id === id) {
+        setCurrentUser({
+          ...currentUser,
+          name: data.name,
+          membershipId: data.membershipId,
+          role: data.role,
+        });
+      }
+      return { ok: true };
+    } catch (err) {
+      return { ok: false, error: err.message };
+    }
   };
 
-  const deleteUser = (id) => {
-    if (id === currentUserId) {
+  const deleteUser = async (id) => {
+    if (id === currentUser?.id) {
       return { ok: false, error: "You cannot delete the account you are logged in with" };
     }
-    setUsers((prev) => prev.filter((u) => u.id !== id));
-    return { ok: true };
+    try {
+      await api.deleteUser(id);
+      await loadUsers();
+      return { ok: true };
+    } catch (err) {
+      return { ok: false, error: err.message };
+    }
   };
 
   const value = { users, currentUser, login, logout, addUser, updateUser, deleteUser };
